@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -12,71 +13,30 @@ const CATEGORIES = [
   { id: 'workshop', label: '🛠️ Workshop' },
 ];
 
-const EVENTS = [
-  {
-    id: 1,
-    title: 'PM & Strategy Networking Night',
-    club: 'Cornell Product Club',
-    date: 'Today · 6:00 PM',
-    location: 'Statler Hall 100',
-    attending: 120,
-    categories: ['networking', 'food', 'professional'],
-    accentColor: '#1D9E75',
-    badges: ['🤝 Networking', '🍕 Free Food', '💼 Professional'],
-  },
-  {
-    id: 2,
-    title: 'Alumni Fireside: Breaking into Fintech',
-    club: 'Cornell Fintech Club',
-    date: 'Today · 7:30 PM',
-    location: 'Gates Hall G01',
-    attending: 58,
-    categories: ['alumni', 'professional'],
-    accentColor: '#B31B1B',
-    badges: ['🎓 Alumni Talks', '💼 Professional'],
-  },
-  {
-    id: 3,
-    title: 'International Food Fair & Culture Fest',
-    club: 'Cornell International Students Assoc.',
-    date: 'Today · 5:00 PM',
-    location: 'Willard Straight Hall',
-    attending: 230,
-    categories: ['social', 'food'],
-    accentColor: '#D85A30',
-    badges: ['🌍 Cultural', '🍕 Free Food', '🎉 Social'],
-  },
-  {
-    id: 4,
-    title: 'Women in Tech: Career Panel 2025',
-    club: 'Women in Computing at Cornell',
-    date: 'Tomorrow · 5:30 PM',
-    location: 'Rhodes Hall 253',
-    attending: 89,
-    categories: ['panel', 'professional'],
-    accentColor: '#534AB7',
-    badges: ['🎙️ Panel Discussion', '💼 Professional'],
-  },
-  {
-    id: 5,
-    title: 'Intro to Machine Learning — Hands-on Workshop',
-    club: 'Cornell Data Science',
-    date: 'Tomorrow · 4:00 PM',
-    location: 'Bloomberg 165',
-    attending: 44,
-    categories: ['workshop', 'food'],
-    accentColor: '#BA7517',
-    badges: ['🛠️ Workshop', '🍕 Free Food', '👕 Free Merch'],
-  },
-];
-
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  async function fetchEvents() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date', { ascending: true });
+    if (error) console.error(error);
+    else setEvents(data);
+    setLoading(false);
+  }
+
   const filtered = activeFilter === 'all'
-    ? EVENTS
-    : EVENTS.filter(e => e.categories.includes(activeFilter));
+    ? events
+    : events.filter(e => e.categories && e.categories.includes(activeFilter));
 
   return (
     <div style={{ background: '#F5F5F5', minHeight: '100vh', paddingBottom: 80 }}>
@@ -87,7 +47,7 @@ export default function Home() {
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#B31B1B' }} />
             <div>
               <div style={{ fontSize: 15, fontWeight: 500, color: '#111' }}>Big Red Happenings</div>
-              <div style={{ fontSize: 11, color: '#999' }}>Cornell University · {EVENTS.length} events this week</div>
+              <div style={{ fontSize: 11, color: '#999' }}>Cornell University · {events.length} events this week</div>
             </div>
           </div>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#FCEBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, color: '#B31B1B' }}>BD</div>
@@ -109,32 +69,39 @@ export default function Home() {
       </div>
 
       {/* Feed */}
-      <div style={{ padding: '14px 12px 0', fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#999' }}>Today — Monday, May 5</div>
-      <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map(event => (
-          <div key={event.id} onClick={() => navigate(`/event/${event.id}`)}
-            style={{ background: '#fff', border: '0.5px solid #E5E5E5', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}>
-            <div style={{ height: 4, background: event.accentColor }} />
-            <div style={{ padding: '12px 14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#111', flex: 1, marginRight: 8 }}>{event.title}</div>
-                <div style={{ fontSize: 11, color: '#999', whiteSpace: 'nowrap' }}>{event.date.split('·')[1]}</div>
-              </div>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>{event.club}</div>
-              <div style={{ display: 'flex', gap: 6, fontSize: 11, color: '#999', marginBottom: 8 }}>
-                <span>📍 {event.location}</span>
-                <span>·</span>
-                <span>👤 {event.attending} attending</span>
-              </div>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {event.badges.map(b => (
-                  <div key={b} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: '#F5F5F5', color: '#555' }}>{b}</div>
-                ))}
+      <div style={{ padding: '14px 12px 0', fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#999' }}>Upcoming Events</div>
+
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 14 }}>Loading events...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 14 }}>No events found.</div>
+      ) : (
+        <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map(event => (
+            <div key={event.id} onClick={() => navigate(`/event/${event.id}`)}
+              style={{ background: '#fff', border: '0.5px solid #E5E5E5', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}>
+              <div style={{ height: 4, background: event.accent_color || '#B31B1B' }} />
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: '#111', flex: 1, marginRight: 8 }}>{event.title}</div>
+                  <div style={{ fontSize: 11, color: '#999', whiteSpace: 'nowrap' }}>{event.start_time?.slice(0, 5)}</div>
+                </div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>{event.club_name}</div>
+                <div style={{ display: 'flex', gap: 6, fontSize: 11, color: '#999', marginBottom: 8 }}>
+                  <span>📍 {event.location}</span>
+                  <span>·</span>
+                  <span>👤 {event.attending} attending</span>
+                </div>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {event.badges && event.badges.map(b => (
+                    <div key={b} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: '#F5F5F5', color: '#555' }}>{b}</div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Bottom Nav */}
       <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 390, background: '#fff', borderTop: '0.5px solid #E5E5E5', display: 'flex', justifyContent: 'space-around', padding: '10px 0 14px', zIndex: 10 }}>
