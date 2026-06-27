@@ -1,119 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-
-const EVENTS = [
-  {
-    id: 1,
-    title: 'PM & Strategy Networking Night',
-    club: 'Cornell Product Club',
-    clubMembers: 340,
-    clubEvents: 12,
-    date: 'Monday, May 5',
-    time: '6:00 – 8:30 PM',
-    doorsOpen: '5:45 PM',
-    location: 'Statler Hall, Room 100',
-    locationSub: 'Cornell University, Ithaca NY',
-    attending: 120,
-    waitlist: 34,
-    admission: 'Free · Open to all Cornell students',
-    accentColor: '#1D9E75',
-    badges: ['🤝 Networking', '🍕 Free Food', '💼 Professional'],
-    description: `Join Cornell Product Club for an evening of networking with PMs, strategists, and recruiters from top companies. Whether you're exploring product management or actively recruiting, this is your chance to make real connections.\n\nLight dinner and drinks provided. Business casual attire recommended. Bring your resume!`,
-    notes: 'Business casual dress code · Bring your resume',
-    clubEmoji: '💻',
-  },
-  {
-    id: 2,
-    title: 'Alumni Fireside: Breaking into Fintech',
-    club: 'Cornell Fintech Club',
-    clubMembers: 210,
-    clubEvents: 8,
-    date: 'Monday, May 5',
-    time: '7:30 – 9:00 PM',
-    doorsOpen: '7:15 PM',
-    location: 'Gates Hall, Room G01',
-    locationSub: 'Cornell University, Ithaca NY',
-    attending: 58,
-    waitlist: 10,
-    admission: 'Free · Open to all Cornell students',
-    accentColor: '#B31B1B',
-    badges: ['🎓 Alumni Talks', '💼 Professional'],
-    description: `Hear from Cornell alumni who have broken into fintech at companies like Stripe, Robinhood, and Goldman Sachs. A rare chance to ask real questions and make real connections.\n\nQ&A session to follow. Light refreshments provided.`,
-    notes: 'Bring questions for the speakers',
-    clubEmoji: '💰',
-  },
-  {
-    id: 3,
-    title: 'International Food Fair & Culture Fest',
-    club: 'Cornell International Students Assoc.',
-    clubMembers: 580,
-    clubEvents: 15,
-    date: 'Monday, May 5',
-    time: '5:00 – 8:00 PM',
-    doorsOpen: '4:45 PM',
-    location: 'Willard Straight Hall',
-    locationSub: 'Cornell University, Ithaca NY',
-    attending: 230,
-    waitlist: 0,
-    admission: 'Free · Open to all Cornell students',
-    accentColor: '#D85A30',
-    badges: ['🌍 Cultural', '🍕 Free Food', '🎉 Social'],
-    description: `Experience food, music, and culture from over 30 countries. Student organizations will be showcasing their heritage through food, performances, and interactive displays.\n\nEveryone is welcome. Come hungry!`,
-    notes: 'No registration required · Walk-ins welcome',
-    clubEmoji: '🌍',
-  },
-  {
-    id: 4,
-    title: 'Women in Tech: Career Panel 2025',
-    club: 'Women in Computing at Cornell',
-    clubMembers: 420,
-    clubEvents: 10,
-    date: 'Tuesday, May 6',
-    time: '5:30 – 7:30 PM',
-    doorsOpen: '5:15 PM',
-    location: 'Rhodes Hall, Room 253',
-    locationSub: 'Cornell University, Ithaca NY',
-    attending: 89,
-    waitlist: 22,
-    admission: 'Free · Open to all Cornell students',
-    accentColor: '#534AB7',
-    badges: ['🎙️ Panel Discussion', '💼 Professional'],
-    description: `Join us for a panel of inspiring women in tech sharing their journeys, challenges, and advice. Panelists include engineers, PMs, and founders from top companies.\n\nNetworking reception to follow with light refreshments.`,
-    notes: 'All genders welcome · Networking after the panel',
-    clubEmoji: '👩‍💻',
-  },
-  {
-    id: 5,
-    title: 'Intro to Machine Learning — Hands-on Workshop',
-    club: 'Cornell Data Science',
-    clubMembers: 290,
-    clubEvents: 9,
-    date: 'Tuesday, May 6',
-    time: '4:00 – 6:00 PM',
-    doorsOpen: '3:45 PM',
-    location: 'Bloomberg, Room 165',
-    locationSub: 'Cornell University, Ithaca NY',
-    attending: 44,
-    waitlist: 5,
-    admission: 'Free · Open to all Cornell students',
-    accentColor: '#BA7517',
-    badges: ['🛠️ Workshop', '🍕 Free Food', '👕 Free Merch'],
-    description: `A hands-on intro to machine learning using Python and scikit-learn. No prior ML experience needed — just bring your laptop and curiosity.\n\nPizza provided. Free CDS t-shirt for all attendees!`,
-    notes: 'Bring your laptop · No ML experience needed',
-    clubEmoji: '📊',
-  },
-];
+import { supabase } from '../lib/supabaseClient';
 
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const event = EVENTS.find(e => e.id === parseInt(id));
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [rsvped, setRsvped] = useState(false);
   const [calAdded, setCalAdded] = useState(false);
-  const [bannerOn, setBannerOn] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [bannerOn, setBannerOn] = useState(false);
 
-  if (!event) return <div style={{ padding: 20 }}>Event not found.</div>;
+  useEffect(() => {
+    fetchEvent();
+  }, [id]);
+
+  async function fetchEvent() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) console.error(error);
+    else setEvent(data);
+    setLoading(false);
+  }
+
+  if (loading) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 14 }}>Loading event...</div>
+  );
+
+  if (!event) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 14 }}>Event not found.</div>
+  );
 
   const avatarColors = ['#E1F5EE', '#EEEDFE', '#FAEEDA', '#E6F1FB', '#FCEBEB'];
   const avatarText = ['AK', 'JS', 'MR', 'TL', '+'];
@@ -122,38 +43,40 @@ export default function EventDetail() {
     <div style={{ background: '#F5F5F5', minHeight: '100vh', paddingBottom: 90, maxWidth: 390, margin: '0 auto' }}>
 
       {/* Hero */}
-      <div style={{ position: 'relative', height: 210, overflow: 'hidden', background: event.accentColor }}>
-        {bannerOn && (
-          <img src="https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&q=80"
-            alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+      <div style={{ position: 'relative', height: 210, overflow: 'hidden', background: event.accent_color || '#B31B1B' }}>
+        {bannerOn && event.banner_url && (
+          <img src={event.banner_url} alt="banner"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
         )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.6))' }} />
         <div onClick={() => navigate(-1)}
           style={{ position: 'absolute', top: 14, left: 14, width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 2, fontSize: 16 }}>←</div>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 14px 16px', zIndex: 2 }}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            {event.badges.map(b => (
+            {event.badges && event.badges.map(b => (
               <div key={b} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>{b}</div>
             ))}
           </div>
           <div style={{ fontSize: 19, fontWeight: 500, color: '#fff', lineHeight: 1.3, marginBottom: 4 }}>{event.title}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>Hosted by {event.club}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>Hosted by {event.club_name}</div>
         </div>
       </div>
 
       {/* Banner toggle */}
-      <div onClick={() => setBannerOn(!bannerOn)}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: '#999', padding: 8, cursor: 'pointer', borderBottom: '0.5px solid #E5E5E5', background: '#fff' }}>
-        {bannerOn ? '✕ Remove banner preview' : '📷 Tap to preview with event banner'}
-      </div>
+      {event.banner_url && (
+        <div onClick={() => setBannerOn(!bannerOn)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: '#999', padding: 8, cursor: 'pointer', borderBottom: '0.5px solid #E5E5E5', background: '#fff' }}>
+          {bannerOn ? '✕ Remove banner preview' : '📷 Tap to preview with event banner'}
+        </div>
+      )}
 
       <div style={{ padding: '0 14px' }}>
 
         {/* Info card */}
         <div style={{ background: '#fff', border: '0.5px solid #E5E5E5', borderRadius: 14, padding: 14, margin: '12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
-            { icon: '📅', label: 'Date & Time', val: `${event.date} · ${event.time}`, sub: `Doors open at ${event.doorsOpen}` },
-            { icon: '📍', label: 'Location', val: event.location, sub: event.locationSub },
+            { icon: '📅', label: 'Date & Time', val: `${event.date} · ${event.start_time?.slice(0,5)} – ${event.end_time?.slice(0,5)}`, sub: event.doors_open ? `Doors open at ${event.doors_open?.slice(0,5)}` : null },
+            { icon: '📍', label: 'Location', val: event.location, sub: event.location_sub },
             { icon: '🎟️', label: 'Admission', val: event.admission, sub: null },
           ].map((row, i) => (
             <div key={i}>
@@ -168,7 +91,6 @@ export default function EventDetail() {
               </div>
             </div>
           ))}
-          {/* Map placeholder */}
           <div style={{ background: '#F5F5F5', border: '0.5px solid #E5E5E5', borderRadius: 10, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999' }}>📍 Map preview · Tap for directions</div>
         </div>
 
@@ -181,7 +103,6 @@ export default function EventDetail() {
           </div>
           <div style={{ fontSize: 12, color: '#666' }}>
             <strong style={{ color: '#111' }}>{event.attending} students</strong> are going
-            {event.waitlist > 0 && ` · ${event.waitlist} on waitlist`}
           </div>
         </div>
 
@@ -199,10 +120,10 @@ export default function EventDetail() {
         {/* Club card */}
         <div style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: '16px 0 8px' }}>Hosted by</div>
         <div style={{ background: '#fff', border: '0.5px solid #E5E5E5', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{event.clubEmoji}</div>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{event.club_emoji || '🎓'}</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#111' }}>{event.club}</div>
-            <div style={{ fontSize: 12, color: '#666' }}>{event.clubEvents} upcoming events · {event.clubMembers} members</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#111' }}>{event.club_name}</div>
+            <div style={{ fontSize: 12, color: '#666' }}>Upcoming events · Members</div>
           </div>
           <div onClick={() => setFollowing(!following)}
             style={{ marginLeft: 'auto', fontSize: 12, color: following ? '#fff' : '#B31B1B', background: following ? '#B31B1B' : 'transparent', border: '0.5px solid #B31B1B', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
